@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+
+
+  pgdb:
+    image: postgres:13
+    restart: always
+    environment:
+      POSTGRES_USER: retail
+      POSTGRES_PASSWORD: retail
+      POSTGRES_DB: retaildb
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+
+  airflow-init:
+    image: apache/airflow:2.7.0
+    depends_on:
+      - postgres
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    entrypoint: /bin/bash
+    command: -c "airflow db migrate && airflow users create --username admin --firstname Admin --lastname User --role Admin --email admin@example.com --password admin"
+
+  webserver:
+    image: apache/airflow:2.7.0
+    depends_on:
+      - postgres
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__FERNET_KEY: '08meXbrWkUxyXDuI9sg55KaC_5VSwmBO5KXCMM5axjs='
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__LOGGING__BASE_LOG_FOLDER: /opt/airflow/logs
+      AIRFLOW__LOGGING__REMOTE_BASE_LOG_FOLDER: http://webserver:8793
+      _PIP_ADDITIONAL_REQUIREMENTS: "--no-cache-dir -r /requirements.txt"
+
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./warehouse:/opt/warehouse
+      - ./airflow/logs:/opt/airflow/logs
+      - ./Data:/opt/Data
+      - ./requirements.txt:/requirements.txt
+    ports:
+      - "8080:8080"
+    command: webserver
+
+  scheduler:
+    image: apache/airflow:2.7.0
+    depends_on:
+      - webserver
+    environment:
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__FERNET_KEY: '08meXbrWkUxyXDuI9sg55KaC_5VSwmBO5KXCMM5axjs='
+      AIRFLOW__LOGGING__BASE_LOG_FOLDER: /opt/airflow/logs
+      AIRFLOW__LOGGING__REMOTE_BASE_LOG_FOLDER: http://webserver:8793
+      _PIP_ADDITIONAL_REQUIREMENTS: "--no-cache-dir -r /requirements.txt"
+
+
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./warehouse:/opt/warehouse
+      - ./airflow/logs:/opt/airflow/logs
+      - ./Data:/opt/Data
+      - ./requirements.txt:/requirements.txt
+
+    command: scheduler
+
+volumes:
+  postgres-db-volume:
+  pgdata:
+

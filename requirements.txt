@@ -1,0 +1,8 @@
+requests
+pandas
+apache-airflow==2.7.0
+sqlalchemy
+psycopg2-binary
+pendulum==2.1.2
+psycopg
+
