@@ -1,4 +1,4 @@
-Global E-Commerce Sales Analytics Pipeline
+E-Commerce Sales Analytics Pipeline
 
 
 🚀 Overview
